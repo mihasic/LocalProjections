@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="LightningStore" Version="0.3.2" />
+    <PackageReference Include="LuceneSearch" Version="0.3.1" />
+  </ItemGroup>
+</Project>
