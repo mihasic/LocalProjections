@@ -15,7 +15,7 @@ namespace LocalProjections
         public CheckpointProjection(
             IStatefulProjection inner,
             CheckpointStore checkpointStore,
-            Action<AllStreamPosition> notifyCheckpoint)
+            Action<AllStreamPosition> notifyCheckpoint = null)
         {
             _inner = inner;
             _checkpointStore = checkpointStore;

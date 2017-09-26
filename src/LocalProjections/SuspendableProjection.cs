@@ -10,9 +10,10 @@ namespace LocalProjections
         private readonly Action<Exception> _onSuspend;
         private bool _suspended = false;
 
-        public SuspendableProjection(IStatefulProjection inner, Action<Exception> onSuspend)
+        public SuspendableProjection(IStatefulProjection inner, Action<Exception> onSuspend = null)
         {
             _inner = inner;
+            _onSuspend = onSuspend;
         }
 
         private void Suspend(Exception ex)
