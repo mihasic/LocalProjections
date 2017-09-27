@@ -9,7 +9,7 @@ namespace LocalProjections
 
     public static class Extensions
     {
-        public static async Task HandleException(this Func<Task> action, Action<Exception> onError)
+        public static async Task HandleException(this Func<Task> action, Action<Exception> onError = null)
         {
             try
             {
@@ -17,7 +17,7 @@ namespace LocalProjections
             }
             catch (Exception ex) when (!(ex is OperationCanceledException))
             {
-                onError(ex);
+                onError?.Invoke(ex);
             }
         }
 

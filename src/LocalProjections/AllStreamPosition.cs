@@ -86,6 +86,9 @@ namespace LocalProjections
         public long ToInt64() =>
             _value ?? -1;
 
+        public AllStreamPosition Shift(int offset = 1) =>
+            new AllStreamPosition(ToInt64() + offset);
+
         public static AllStreamPosition FromNullableInt64(long? position) =>
             position.HasValue ? new AllStreamPosition(position.Value) : None;
     }

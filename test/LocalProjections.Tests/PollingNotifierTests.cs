@@ -23,7 +23,7 @@ namespace LocalProjections.Tests
                     : throw new InvalidOperationException("Error happened"),
                 (ex, p) =>
                 {
-                    _error.SetResult(ex);
+                    _error.SetResult(ex); // this actually fails 2nd+ time (intentional)
                     return Task.CompletedTask;
                 },
                 interval: Interval);
@@ -38,7 +38,7 @@ namespace LocalProjections.Tests
                 using (var cts = new CancellationTokenSource())
                 {
                     cts.CancelAfter(Interval*3);
-                    await _notifier.WaitForNotification(cts.Token);
+                    await _notifier.WaitForNotification(cts.Token).ConfigureAwait(false);
                     return true;
                 }
             }
@@ -60,7 +60,7 @@ namespace LocalProjections.Tests
             // this also verifies cancellation
             (await Wait()).ShouldBeFalse();
 
-            _currentPosition = new AllStreamPosition(_currentPosition.ToInt64() + 1);
+            _currentPosition = _currentPosition.Shift();
             (await Wait()).ShouldBeTrue();
         }
 
@@ -70,11 +70,11 @@ namespace LocalProjections.Tests
             _currentPosition = new AllStreamPosition(9998);
             (await Wait()).ShouldBeTrue();
 
-            _currentPosition = new AllStreamPosition(_currentPosition.ToInt64() + 1);
-            var error = await _error.Task;
-            error.ShouldBeOfType<InvalidOperationException>();
+            _currentPosition = _currentPosition.Shift();
+            (await Wait()).ShouldBeFalse();
+            (await _error.Task.ConfigureAwait(false)).ShouldBeOfType<InvalidOperationException>();
 
-            _currentPosition = new AllStreamPosition(_currentPosition.ToInt64() + 1);
+            _currentPosition = _currentPosition.Shift();
             (await Wait()).ShouldBeTrue();
         }
     }

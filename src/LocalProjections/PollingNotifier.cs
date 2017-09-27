@@ -37,7 +37,7 @@ namespace LocalProjections
                 }
                 catch(Exception ex)
                 {
-                    await _onError(ex, headPosition).ConfigureAwait(false);
+                    await Extensions.HandleException(() => _onError(ex, headPosition)).ConfigureAwait(false);
                 }
 
                 if(headPosition > previousHeadPosition)
