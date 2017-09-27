@@ -7,18 +7,19 @@ namespace LocalProjections
     public class GenericSubscription : IDisposable
     {
         private readonly ReadAllPageFunc _readAllPage;
-        private AllStreamPosition _nextPosition;
         private readonly CancellationTokenSource _disposed = new CancellationTokenSource();
-        private readonly Func<Task> _waitForEvent;
+        private readonly Func<CancellationToken, Task> _waitForEvent;
         private readonly TaskCompletionSource<object> _started = new TaskCompletionSource<object>();
         private readonly MessageReceived _onMessage;
         private readonly HasCaughtUp _hasCaughtUp;
         private readonly Func<Exception, Task> _onSubscriptionError;
 
+        private AllStreamPosition _nextPosition;
+
         public GenericSubscription(
             ReadAllPageFunc readAllPage,
             AllStreamPosition fromPosition,
-            Func<Task> waitForEvent,
+            Func<CancellationToken, Task> waitForEvent,
             MessageReceived onMessage,
             Func<Exception, Task> onSubscriptionError,
             HasCaughtUp hasCaughtUp)
@@ -62,7 +63,7 @@ namespace LocalProjections
                 }
 
                 // Wait for notification before starting again. 
-                await _waitForEvent().ConfigureAwait(false);
+                await _waitForEvent(_disposed.Token).ConfigureAwait(false);
             }
         }
 

@@ -10,7 +10,7 @@ namespace LocalProjections
         private readonly Func<CancellationToken, Task<AllStreamPosition>> _getHeadPosition;
         private readonly Func<Exception, AllStreamPosition, Task> _onError;
         private readonly TimeSpan _interval;
-        private readonly AsyncAutoResetEvent _streamStoreNotification = new AsyncAutoResetEvent();
+        private readonly AsyncAutoResetEvent _autoResetEvent = new AsyncAutoResetEvent();
         private readonly CancellationTokenSource _disposed = new CancellationTokenSource();
 
         public PollingNotifier(
@@ -34,18 +34,15 @@ namespace LocalProjections
                 try
                 {
                     headPosition = await _getHeadPosition(_disposed.Token).ConfigureAwait(false);
-                    System.Diagnostics.Debug.WriteLine($"### Position {headPosition}");
                 }
                 catch(Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"### Error {ex}");
                     await _onError(ex, headPosition).ConfigureAwait(false);
                 }
 
                 if(headPosition > previousHeadPosition)
                 {
-                    _streamStoreNotification.Set();
-                    System.Diagnostics.Debug.WriteLine($"### Set notification {headPosition}");
+                    _autoResetEvent.Set();
                     previousHeadPosition = headPosition;
                 }
                 else
@@ -55,8 +52,13 @@ namespace LocalProjections
             }
         }
 
-        public Task WaitForNotification() =>
-            _streamStoreNotification.WaitAsync(_disposed.Token);
+        public async Task WaitForNotification(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposed.Token))
+            {
+                await _autoResetEvent.WaitAsync(cts.Token);
+            }
+        }
 
         public void Dispose() =>
             _disposed.Cancel();

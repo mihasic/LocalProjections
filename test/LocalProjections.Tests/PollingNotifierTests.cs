@@ -1,6 +1,7 @@
 namespace LocalProjections.Tests
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Shouldly;
     using Xunit;
@@ -30,22 +31,37 @@ namespace LocalProjections.Tests
 
         public void Dispose() => _notifier.Dispose();
 
-        private Task<bool> Wait() =>
-            _notifier.WaitForNotification().WithTimeout(Interval*3);
+        private async Task<bool> Wait()
+        {
+            try
+            {
+                using (var cts = new CancellationTokenSource())
+                {
+                    cts.CancelAfter(Interval*3);
+                    await _notifier.WaitForNotification(cts.Token);
+                    return true;
+                }
+            }
+            catch(OperationCanceledException)
+            {
+                return false;
+            }
+        }
 
         [Fact]
         public async Task No_notification_on_null_position()
         {
-            var result = await Wait();
-            result.ShouldBeFalse();
+            (await Wait()).ShouldBeFalse();
         }
 
         [Fact]
         public async Task Notification_on_position_change()
         {
+            // this also verifies cancellation
+            (await Wait()).ShouldBeFalse();
+
             _currentPosition = new AllStreamPosition(_currentPosition.ToInt64() + 1);
-            var result = await Wait();
-            result.ShouldBeTrue();
+            (await Wait()).ShouldBeTrue();
         }
 
         [Fact]
@@ -55,7 +71,7 @@ namespace LocalProjections.Tests
             (await Wait()).ShouldBeTrue();
 
             _currentPosition = new AllStreamPosition(_currentPosition.ToInt64() + 1);
-            var error = await _error.Task.WithTimeout<Exception>(Interval*3);
+            var error = await _error.Task;
             error.ShouldBeOfType<InvalidOperationException>();
 
             _currentPosition = new AllStreamPosition(_currentPosition.ToInt64() + 1);
