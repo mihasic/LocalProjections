@@ -1,36 +1,54 @@
 namespace LocalProjections.Tests
 {
-    using System;
-    using System.Linq;
     using System.Threading.Tasks;
+    using Shouldly;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class GenericSubscriptionTests
     {
-        [Fact]
-        public async Task Test()
-        {
-            AllStreamPosition position = AllStreamPosition.None;
-            ReadAllPageFunc readAllPage = (from, ct) => Task.FromResult(new ReadAllPage(
-                from,
-                from.Shift(10),
-                (from.ToInt64()+10) % 20 == 0,
-                Enumerable.Range(0, 10).Select(x => new Envelope(from.Shift(x), x)).ToArray()
-            ));
-            MessageReceived handler = null;
-            Func<Exception, Task> onError = null;
-            HasCaughtUp hasCaughtUp = null;
+        private readonly ITestOutputHelper _output;
 
-            using (var notifier = new PollingNotifier(_ => Task.FromResult(position)))
-            using (var s = new GenericSubscription(
-                readAllPage,
-                AllStreamPosition.None,
-                notifier.WaitForNotification,
-                handler,
-                onError,
-                hasCaughtUp))
+        public GenericSubscriptionTests(ITestOutputHelper output) =>
+            _output = output;
+
+        [Fact]
+        public async Task Normal_subscription_with_appended_events()
+        {
+            using (var fixture = new SubscriptionFixture(_output.WriteLine))
             {
-                await s.Started.ConfigureAwait(false);
+                await fixture.Subscription.Started.ConfigureAwait(false);
+                await fixture.WaitForCaughtUp().ConfigureAwait(false);
+                fixture.Subscription.LastPosition.ShouldBe(fixture.LastProcessed);
+                fixture.LastProcessed.ToInt64().ShouldBe(fixture.MaxPosition);
+
+                fixture.AppendEvents(35);
+
+                await fixture.WaitForCaughtUp().ConfigureAwait(false);
+                fixture.Subscription.LastPosition.ShouldBe(fixture.LastProcessed);
+                fixture.LastProcessed.ToInt64().ShouldBe(fixture.MaxPosition);
+            }
+        }
+
+        [Fact]
+        public async Task Gets_disposed_on_error()
+        {
+            using (var fixture = new SubscriptionFixture(_output.WriteLine,
+                maxPosition: 10,
+                handlerExceptionPosition: 11))
+            {
+                await fixture.Subscription.Started.ConfigureAwait(false);
+                await fixture.WaitForCaughtUp().ConfigureAwait(false);
+                fixture.Subscription.LastPosition.ShouldBe(fixture.LastProcessed);
+                fixture.LastProcessed.ToInt64().ShouldBe(fixture.MaxPosition);
+
+                fixture.AppendEvents(5);
+
+                var error = await fixture.WaitForException.ConfigureAwait(false);
+                error.ShouldNotBeNull();
+                fixture.AppendEvents(5);
+
+                fixture.Subscription.LastPosition.ToInt64().ShouldBe(11);
             }
         }
     }

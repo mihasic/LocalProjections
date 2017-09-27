@@ -36,8 +36,8 @@ namespace LocalProjections
             Task.Run(PullAndPush);
         }
 
-        public long? FromPosition { get; }
-        public long? LastPosition { get; private set; }
+        public AllStreamPosition FromPosition { get; }
+        public AllStreamPosition LastPosition { get; private set; }
         public Task Started => _started.Task;
 
         private async Task PullAndPush()

@@ -21,5 +21,8 @@ namespace LocalProjections
             IsEnd = isEnd;
             Messages = messages;
         }
+
+        public override string ToString() =>
+            $"ReadAllPage({FromPosition}, {NextPosition}, {IsEnd}, [{Messages.Count}])";
     }
 }
