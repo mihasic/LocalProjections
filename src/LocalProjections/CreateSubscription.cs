@@ -6,5 +6,6 @@ namespace LocalProjections
     public delegate Task<IDisposable> CreateSubscription(
         AllStreamPosition fromPosition,
         MessageReceived onMessage,
-        HasCaughtUp hasCaughtUp);
+        HasCaughtUp hasCaughtUp,
+        Func<Exception, Task> onSubscriptionError);
 }
