@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <Version>0.1.0</Version>
+    <Authors>M. Rybnikov</Authors>
+    <PackageLicenseUrl>https://github.com/mihasic/LocalProjections/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/mihasic/LocalProjections/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/mihasic/LocalProjections/</RepositoryUrl>
+  </PropertyGroup>
+</Project>
