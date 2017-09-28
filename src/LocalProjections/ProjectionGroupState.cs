@@ -1,6 +1,7 @@
 namespace LocalProjections
 {
     using System;
+
     public class ProjectionGroupState
     {
         public readonly string Name;
