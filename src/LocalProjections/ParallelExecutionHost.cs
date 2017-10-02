@@ -25,8 +25,6 @@ namespace LocalProjections
 
         public void Dispose()
         {
-            foreach (var g in _groups())
-                g.Dispose();
         }
 
         public Task Project(Envelope message, CancellationToken cancellationToken = default(CancellationToken)) =>

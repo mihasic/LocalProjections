@@ -4,12 +4,14 @@ namespace LocalProjections.Tests
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+
     public class SubscriptionFixture : IDisposable
     {
         private readonly CancellationTokenSource _cts;
         private readonly TaskCompletionSource<Exception> _exceptionSource = new TaskCompletionSource<Exception>();
-        public readonly GenericSubscription Subscription;
         private readonly Action<string> _writeLine;
+
+        public readonly GenericSubscription Subscription;
         public readonly Func<Task> WaitForCaughtUp;
         public AllStreamPosition LastProcessed { get; private set; }
         public long MaxPosition { get; private set; } = 20;

@@ -4,7 +4,7 @@ namespace LocalProjections
     using System.Collections.Generic;
     using System.Linq;
 
-    public class ProjectionGroupStateObserver
+    public class ProjectionGroupStateObserver : IProjectionGroupStateObserver
     {
         private readonly ConcurrentDictionary<string, ProjectionGroupState> _states = new ConcurrentDictionary<string, ProjectionGroupState>();
 
@@ -19,6 +19,9 @@ namespace LocalProjections
 
         public AllStreamPosition Min =>
             All.Values.Min(x => x.Checkpoint);
+
+        public AllStreamPosition Max =>
+            All.Values.Max(x => x.Checkpoint);
 
         public IEnumerable<string> Suspended =>
             All.Values.Where(x => x.Suspended).Select(x => x.Name);

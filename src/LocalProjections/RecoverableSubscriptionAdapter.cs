@@ -8,27 +8,61 @@ namespace LocalProjections
     using System.Threading;
     using System.Threading.Tasks;
     using LightningStore;
+
     public class RecoverableSubscriptionAdapter : IDisposable
     {
-        private readonly ProjectionGroupStateObserver _observer = new ProjectionGroupStateObserver();
+        private class State : IDisposable
+        {
+            private readonly object _sync = new object();
+            private Action _dispose;
+
+            public State(Action dispose = null)
+            {
+                _dispose = dispose;
+            }
+
+            public void SetState(Action dispose)
+            {
+                lock (_sync)
+                {
+                    _dispose = dispose;
+                }
+            }
+
+            public void Dispose()
+            {
+                lock (_sync)
+                {
+                    _dispose?.Invoke();
+                    _dispose = null;
+                }
+            }
+        }
+        
         private readonly CreateSubscription _createSubscription;
         private readonly IReadOnlyDictionary<string, Func<IStatefulProjection>> _projectionGroups;
+        private readonly string _checkpointsDir;
+
+        private readonly ProjectionGroupStateObserver _observer = new ProjectionGroupStateObserver();
         private readonly ConcurrentDictionary<string, CheckpointStore> _checkpointStores =
             new ConcurrentDictionary<string, CheckpointStore>();
-        private readonly object _sync = new object();
-        private IDisposable _subscription = null;
-        private string _baseDir;
+        private readonly CancellationTokenSource _stopSource = new CancellationTokenSource();
+        private readonly State _state = new State();
+
+        private int _started = 0;
 
         public RecoverableSubscriptionAdapter(
             CreateSubscription createSubscription,
             string baseDir,
             IReadOnlyDictionary<string, Func<IStatefulProjection>> projectionGroups)
         {
-            _baseDir = Path.Combine(baseDir, "checkpoints");
-            Directory.CreateDirectory(_baseDir);
+            _checkpointsDir = Path.Combine(baseDir, "checkpoints");
+            Directory.CreateDirectory(_checkpointsDir);
             _createSubscription = createSubscription;
             _projectionGroups = projectionGroups;
         }
+
+        public ProjectionGroupStateObserver ProjectionGroupState => _observer;
 
         private IStatefulProjection WrapProjection(
             string name,
@@ -36,7 +70,7 @@ namespace LocalProjections
             int maxBatchSize = 2048)
         {
             var checkpointStore = _checkpointStores.GetOrAdd(name,
-                _ => new CheckpointStore(Path.Combine(_baseDir, $"{name}.cpt")));
+                _ => new CheckpointStore(Path.Combine(_checkpointsDir, $"{name}.cpt")));
             return new SuspendableProjection(
                 new CommitNthProjection(
                     new CheckpointProjection(
@@ -50,48 +84,66 @@ namespace LocalProjections
             );
         }
 
-        public async Task Start()
+        public void Start()
         {
-            _subscription?.Dispose();
+            if (Interlocked.CompareExchange(ref _started, 1, 0) != 0) return;
+
+            _stopSource.Token.Register(() =>
+            {
+                _state.Dispose();
+                foreach (var cpStore in _checkpointStores.Values)
+                    cpStore.Dispose();
+                _checkpointStores.Clear();
+            });
+
+            Task.Run(() => Run(_stopSource.Token));
+        }
+
+        private async Task Run(CancellationToken cancellationToken)
+        {
+            _state.Dispose();
+
+            if (cancellationToken.IsCancellationRequested)
+                return;
 
             var projectionGroups = _projectionGroups
                 .ToDictionary(x => x.Key, x => WrapProjection(x.Key, x.Value()));
+
             Func<IReadOnlyCollection<IStatefulProjection>> filtered =
                 () => _observer.Active.Select(x => projectionGroups[x]).ToArray();
+
             var host = new ParallelExecutionHost(filtered);
+
             var subscr = await _createSubscription(
                 _observer.Min,
                 (s, m, ct) => host.Project(m, ct),
                 () => host.Commit(),
-                async ex =>
+                ex =>
                 {
-                    // todo - use AutoResetEvent or something
-                    await Start();
-                }
-                ).ConfigureAwait(false);
-            _subscription = new DelegateDisposable(() =>
+                    if (!cancellationToken.IsCancellationRequested)
+                        Task.Run(() => Run(cancellationToken));
+
+                    return Task.CompletedTask;
+                }).ConfigureAwait(false);
+
+            _state.SetState(() =>
             {
                 subscr.Dispose();
                 host.Dispose();
-                foreach (var p in _observer.Suspended.Select(x => projectionGroups[x]))
+                foreach (var p in projectionGroups.Values)
                     p.Dispose();
             });
-            // TODO - dispose everything properly
-            // TODO - lock
         }
 
-        public async Task Restart()
+        public void Restart()
         {
-            _subscription?.Dispose();
-            await Start().ConfigureAwait(false);
+            _state.Dispose();
+            var token = _stopSource.Token;
+            if (!token.IsCancellationRequested)
+                Task.Run(() => Run(token));
         }
 
-        public void Dispose()
-        {
-            _subscription?.Dispose();
-            foreach (var cpStore in _checkpointStores.Values)
-                cpStore.Dispose();
-            _checkpointStores.Clear();
-        }
+        public void Dispose() =>
+            _stopSource.Cancel();
     }
 }

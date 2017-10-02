@@ -2,6 +2,7 @@ namespace LocalProjections
 {
     using System;
     using LightningStore;
+
     public static class CachingRepositoryHelper
     {
         public static Lazy<CachingRepository<TKey, TDocument>> CreateSession<TKey, TDocument>(

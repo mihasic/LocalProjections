@@ -38,5 +38,35 @@ namespace LocalProjections
                 }
             );
         }
+
+        public static IStatefulProjection Bind<TKey, TValue>(
+            Func<Lazy<CachingRepository<TKey, TValue>>> createSession,
+            Func<Lazy<CachingRepository<TKey, TValue>>, Func<Envelope, CancellationToken, Task>> projectBuilder)
+            where TValue : new()
+        {
+            var session = createSession();
+            var projection = projectBuilder(session);
+            return new DelegateProjection(
+                projection,
+                ct =>
+                {
+                    if (session.IsValueCreated)
+                    {
+                        using (var s = session.Value)
+                        {
+                            s.Commit();
+                            session = createSession();
+                        }
+                        projection = projectBuilder(session);
+                    }
+                    return Task.CompletedTask;
+                },
+                () =>
+                {
+                    if (session.IsValueCreated)
+                        session.Value.Dispose();
+                }
+            );
+        }
     }
 }
