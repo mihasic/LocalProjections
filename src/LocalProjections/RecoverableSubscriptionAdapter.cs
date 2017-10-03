@@ -99,6 +99,11 @@ namespace LocalProjections
             Task.Run(() => Run(_stopSource.Token));
         }
 
+        public AllStreamPosition ReadCheckpoint(string name) =>
+            _checkpointStores.TryGetValue(name, out CheckpointStore store)
+                ? AllStreamPosition.FromNullableInt64(store.Read())
+                : AllStreamPosition.None;
+
         private async Task Run(CancellationToken cancellationToken)
         {
             _state.Dispose();

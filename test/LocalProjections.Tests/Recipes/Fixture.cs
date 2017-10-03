@@ -78,16 +78,24 @@ namespace LocalProjections.Tests.Recipes
                 {
                     {
                         "main",
-                        () => ProjectionHelpers.Bind(
-                            () => CachingRepositoryHelper.CreateSession(Repository, searchProjector),
-                            repo => ProjectionHelpers.Bind(
-                                () => CachingRepositoryHelper.CreateSession(ParentLookup),
-                                parentLookup => (message, ct) =>
-                                {
-                                    Handle(repo, parentLookup, message);
-                                    return Task.CompletedTask;
-                                }
-                            )
+                        () => ProjectionHelpers.Combine(
+                            ProjectionHelpers.Bind(
+                                () => CachingRepositoryHelper.CreateSession(Repository, searchProjector),
+                                repo => ProjectionHelpers.Bind(
+                                    () => CachingRepositoryHelper.CreateSession(ParentLookup),
+                                    parentLookup => (message, ct) =>
+                                    {
+                                        Handle(repo, parentLookup, message);
+                                        return Task.CompletedTask;
+                                    }
+                                )
+                            ),
+                            (message) => _writeLine($"Projected {message.Checkpoint}: {message.Payload?.GetType().Name}"),
+                            () =>
+                            {
+                                searchProjector.Commit();
+                                _writeLine($"Committed");
+                            }
                         )
                     }
                 });

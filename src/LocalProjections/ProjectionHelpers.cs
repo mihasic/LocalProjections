@@ -1,6 +1,7 @@
 namespace LocalProjections
 {
     using System;
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using LightningStore;
@@ -67,6 +68,34 @@ namespace LocalProjections
                         session.Value.Dispose();
                 }
             );
+        }
+
+        public static IStatefulProjection Combine(params IStatefulProjection[] projections) =>
+            new DelegateProjection(
+                (m, ct) => ForEach(projections, p => p.Project(m, ct), ct),
+                ct => ForEach(projections, p => p.Commit(ct), ct),
+                () => ForEach(projections, p => p.Dispose())
+            );
+        public static IStatefulProjection Combine(IStatefulProjection projection,
+            Action<Envelope> project = null,
+            Action commit = null) =>
+            Combine(projection, new DelegateProjection(project, commit));
+
+        private static async Task ForEach<T>(IEnumerable<T> instances, Func<T, Task> action, CancellationToken ct)
+        {
+            foreach (var instance in instances)
+            {
+                if (ct.IsCancellationRequested)
+                    return;
+                await action(instance).ConfigureAwait(false);
+            }
+        }
+        private static void ForEach<T>(IEnumerable<T> instances, Action<T> action)
+        {
+            foreach (var instance in instances)
+            {
+                action(instance);
+            }
         }
     }
 }
