@@ -16,7 +16,7 @@ namespace LocalProjections.Tests
             bool committed = false;
 
             using (var sut = new CommitNthProjection(
-                new DelegateProjection(m => projected = m.Checkpoint, () => committed = true),
+                Util.Projection(m => projected = m.Checkpoint, () => committed = true),
                 n))
             {
                 for (int i = 0; i < n; i++)

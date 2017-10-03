@@ -13,7 +13,7 @@ namespace LocalProjections.Tests
             Exception suspended = null;
 
             using (var sut = new SuspendableProjection(
-                new DelegateProjection(m => throw new Exception("test")),
+                Util.Projection(m => throw new Exception("test")),
                 ex => suspended = ex))
             {
                 for (int i = 1; i < 5; i++)
@@ -29,7 +29,7 @@ namespace LocalProjections.Tests
             bool committed = false;
 
             using (var sut = new SuspendableProjection(
-                new DelegateProjection(m => throw new Exception("test"), () => committed = true)))
+                Util.Projection(m => throw new Exception("test"), () => committed = true)))
             {
                 for (int i = 1; i < 5; i++)
                     await sut.Project(new Envelope(new AllStreamPosition(i), null));
@@ -45,7 +45,7 @@ namespace LocalProjections.Tests
             bool committed = false;
 
             using (var sut = new SuspendableProjection(
-                new DelegateProjection(commit: () => committed = true)))
+                Util.Projection(commit: () => committed = true)))
             {
                 for (int i = 1; i < 5; i++)
                     await sut.Project(new Envelope(new AllStreamPosition(i), null));
@@ -62,7 +62,7 @@ namespace LocalProjections.Tests
             AllStreamPosition lastCheckpoint = AllStreamPosition.None;
 
             using (var sut = new SuspendableProjection(
-                new DelegateProjection(m =>
+                Util.Projection(m =>
                 {
                     lastCheckpoint = m.Checkpoint;
                     if (m.Checkpoint == expected) throw new Exception("test");

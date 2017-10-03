@@ -7,9 +7,9 @@ namespace LocalProjections
     using LightningStore;
     using LuceneSearch;
 
-    internal static class Extensions
+    public static class Extensions
     {
-        public static async Task HandleException(this Func<Task> action, Action<Exception> onError = null)
+        internal static async Task HandleException(this Func<Task> action, Action<Exception> onError = null)
         {
             try
             {
@@ -19,6 +19,12 @@ namespace LocalProjections
             {
                 onError?.Invoke(ex);
             }
+        }
+
+        internal static Task Async(Action action)
+        {
+            action?.Invoke();
+            return Task.CompletedTask;
         }
     }
 }

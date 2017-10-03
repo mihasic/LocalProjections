@@ -6,49 +6,35 @@ namespace LocalProjections
 
     public class DelegateProjection : IStatefulProjection
     {
-        private readonly Func<CancellationToken, Task> _commit;
-        private readonly Action _dispose;
-        private readonly Func<Envelope, CancellationToken, Task> _project;
+        internal readonly Func<CancellationToken, Task> CommitFunc;
+        internal readonly Action DisposeFunc;
+        internal readonly Func<Envelope, CancellationToken, Task> ProjectFunc;
 
         public DelegateProjection(
-            Func<Envelope, CancellationToken, Task> project,
-            Func<CancellationToken, Task> commit,
-            Action dispose)
-        {
-            _project = project ?? _project;
-            _commit = commit ?? _commit;
-            _dispose = dispose ?? _dispose;
-        }
-
-        public DelegateProjection(
-            Action<Envelope> project = null,
-            Action commit = null)
+            Func<Envelope, CancellationToken, Task> project = null,
+            Func<CancellationToken, Task> commit = null,
+            Action dispose = null)
             : this()
         {
-            if (project != null)
-                _project = (m, ct) => { project(m); return Task.CompletedTask; };
-            if (commit != null)
-                _commit = _ => { commit(); return Task.CompletedTask; };
+            ProjectFunc = project ?? ProjectFunc;
+            CommitFunc = commit ?? CommitFunc;
+            DisposeFunc = dispose ?? DisposeFunc;
         }
 
         private DelegateProjection()
         {
-            _project = (_, __) => Task.CompletedTask;
-            _commit = _ => Task.CompletedTask;
-            _dispose = () => {};
+            ProjectFunc = (_, __) => Task.CompletedTask;
+            CommitFunc = _ => Task.CompletedTask;
+            DisposeFunc = () => {};
         }
 
         public Task Commit(CancellationToken cancellationToken) =>
-            cancellationToken.IsCancellationRequested
-                ? Task.CompletedTask
-                : _commit(cancellationToken);
+                CommitFunc(cancellationToken);
 
         public void Dispose() =>
-            _dispose();
+            DisposeFunc();
 
         public Task Project(Envelope message, CancellationToken cancellationToken) =>
-            cancellationToken.IsCancellationRequested
-                ? Task.CompletedTask
-                : _project(message, cancellationToken);
+                ProjectFunc(message, cancellationToken);
     }
 }

@@ -34,7 +34,7 @@ namespace LocalProjections.Tests
 
             using (var cpStore = Util.BuildCheckpointStore())
             using (var sut = new CheckpointProjection(
-                new DelegateProjection(m => projected = m.Checkpoint),
+                Util.Projection(m => projected = m.Checkpoint),
                 cpStore,
                 p => notified = p))
             {

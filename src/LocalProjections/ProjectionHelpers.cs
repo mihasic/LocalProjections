@@ -6,6 +6,8 @@ namespace LocalProjections
     using System.Threading.Tasks;
     using LightningStore;
 
+    using static Extensions;
+
     public static class ProjectionHelpers
     {
         public static IStatefulProjection Bind<TKey, TValue>(
@@ -76,10 +78,11 @@ namespace LocalProjections
                 ct => ForEach(projections, p => p.Commit(ct), ct),
                 () => ForEach(projections, p => p.Dispose())
             );
+
         public static IStatefulProjection Combine(IStatefulProjection projection,
             Action<Envelope> project = null,
             Action commit = null) =>
-            Combine(projection, new DelegateProjection(project, commit));
+            Combine(projection, new DelegateProjection((m, ct) => Async(() => project?.Invoke(m)), _ => Async(commit)));
 
         private static async Task ForEach<T>(IEnumerable<T> instances, Func<T, Task> action, CancellationToken ct)
         {
@@ -90,6 +93,7 @@ namespace LocalProjections
                 await action(instance).ConfigureAwait(false);
             }
         }
+
         private static void ForEach<T>(IEnumerable<T> instances, Action<T> action)
         {
             foreach (var instance in instances)

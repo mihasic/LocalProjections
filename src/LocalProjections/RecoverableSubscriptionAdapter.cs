@@ -59,30 +59,22 @@ namespace LocalProjections
             _checkpointsDir = Path.Combine(baseDir, "checkpoints");
             Directory.CreateDirectory(_checkpointsDir);
             _createSubscription = createSubscription;
-            _projectionGroups = projectionGroups;
+            _projectionGroups = projectionGroups.ToDictionary(
+                x => x.Key,
+                x => new StatefulProjectionBuilder(x.Value)
+                    .UseCheckpointStore(
+                        GetCheckpointStore(x.Key),
+                        cp => _observer[x.Key] = _observer[x.Key].MoveTo(cp))
+                    .UseCommitEvery(maxBatchSize: 2048)
+                    .UseSuspendOnException(ex => _observer[x.Key] = _observer[x.Key].Suspend(ex))
+                    .BuildFactory());
         }
 
         public ProjectionGroupStateObserver ProjectionGroupState => _observer;
 
-        private IStatefulProjection WrapProjection(
-            string name,
-            IStatefulProjection projection,
-            int maxBatchSize = 2048)
-        {
-            var checkpointStore = _checkpointStores.GetOrAdd(name,
+        private CheckpointStore GetCheckpointStore(string name) =>
+            _checkpointStores.GetOrAdd(name,
                 _ => new CheckpointStore(Path.Combine(_checkpointsDir, $"{name}.cpt")));
-            return new SuspendableProjection(
-                new CommitNthProjection(
-                    new CheckpointProjection(
-                        projection,
-                        checkpointStore,
-                        cp => _observer[name] = _observer[name].MoveTo(cp)
-                    ),
-                    maxBatchSize
-                ),
-                ex => _observer[name] = _observer[name].Suspend(ex)
-            );
-        }
 
         public void Start()
         {
@@ -104,6 +96,24 @@ namespace LocalProjections
                 ? AllStreamPosition.FromNullableInt64(store.Read())
                 : AllStreamPosition.None;
 
+        private IStatefulProjection CreateParallelGroup()
+        {
+            var projectionGroups = _projectionGroups
+                .ToDictionary(x => x.Key, x => x.Value());
+            Func<IReadOnlyCollection<IStatefulProjection>> filtered =
+                () => _observer.Active.Select(x => projectionGroups[x]).ToArray();
+            var host = new ParallelExecutionHost(filtered);
+
+            return new StatefulProjectionBuilder(host)
+                .Use(disposeMidfunc: downstream => () =>
+                {
+                    downstream();
+                    foreach (var p in projectionGroups.Values)
+                        p.Dispose();
+                })
+                .Build();
+        }
+
         private async Task Run(CancellationToken cancellationToken)
         {
             _state.Dispose();
@@ -111,18 +121,12 @@ namespace LocalProjections
             if (cancellationToken.IsCancellationRequested)
                 return;
 
-            var projectionGroups = _projectionGroups
-                .ToDictionary(x => x.Key, x => WrapProjection(x.Key, x.Value()));
-
-            Func<IReadOnlyCollection<IStatefulProjection>> filtered =
-                () => _observer.Active.Select(x => projectionGroups[x]).ToArray();
-
-            var host = new ParallelExecutionHost(filtered);
+            var host = CreateParallelGroup();
 
             var subscr = await _createSubscription(
                 _observer.Min,
                 (s, m, ct) => host.Project(m, ct),
-                () => host.Commit(),
+                () => host.Commit(cancellationToken),
                 ex =>
                 {
                     if (!cancellationToken.IsCancellationRequested)
@@ -135,8 +139,6 @@ namespace LocalProjections
             {
                 subscr.Dispose();
                 host.Dispose();
-                foreach (var p in projectionGroups.Values)
-                    p.Dispose();
             });
         }
 
