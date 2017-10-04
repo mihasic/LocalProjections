@@ -18,6 +18,7 @@ namespace LocalProjections.Tests.Recipes.LmdbLucene
         public readonly SimpleEventStore EventStore;
         public readonly PollingNotifier Notifier;
         public readonly RecoverableSubscriptionAdapter Subscription;
+        public readonly ParallelGroupManager GroupManager;
         public readonly Index Index;
 
         public readonly ObjectRepository<string, SearchDocument> Repository;
@@ -71,8 +72,7 @@ namespace LocalProjections.Tests.Recipes.LmdbLucene
                 return Task.CompletedTask;
             });
 
-            Subscription = new RecoverableSubscriptionAdapter(
-                CreateSubscription,
+            GroupManager = new ParallelGroupManager(
                 _baseDirectory,
                 new Dictionary<string, Func<IStatefulProjection>>
                 {
@@ -99,6 +99,11 @@ namespace LocalProjections.Tests.Recipes.LmdbLucene
                         )
                     }
                 });
+
+            Subscription = new RecoverableSubscriptionAdapter(
+                CreateSubscription,
+                () => Task.FromResult(GroupManager.CreateParallelGroup()),
+                () => GroupManager.ProjectionGroupState.Min);
         }
 
         private void Handle(
@@ -163,6 +168,7 @@ namespace LocalProjections.Tests.Recipes.LmdbLucene
         public void Dispose()
         {
             Subscription.Dispose();
+            GroupManager.Dispose();
             Notifier.Dispose();
             EventStore.Dispose();
             Repository.Dispose();

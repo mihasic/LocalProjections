@@ -4,7 +4,7 @@ namespace LocalProjections.Tests
     using Shouldly;
     using Xunit;
 
-        public class CommitNthProjectionTests
+    public class CommitNthProjectionTests
     {
         [Theory]
         [InlineData(1)]

@@ -24,8 +24,8 @@ namespace LocalProjections.Tests.Recipes.LmdbLucene
             while (sw.ElapsedMilliseconds < timeout)
             {
                 //if (_fixture.Subscription.ProjectionGroupState.Max >= maxCheckpoint)
-                var name = _fixture.Subscription.ProjectionGroupState.All.First().Key;
-                var cp = _fixture.Subscription.ReadCheckpoint(name);
+                var name = _fixture.GroupManager.ProjectionGroupState.All.First().Key;
+                var cp = _fixture.GroupManager.ReadCheckpoint(name);
                 if (cp >= maxCheckpoint)
                     return;
                 await Task.Delay(300);
