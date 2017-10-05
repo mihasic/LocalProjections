@@ -7,6 +7,8 @@ namespace LocalProjections
     using System.Linq;
     using LightningStore;
 
+    // TODO - extract checkpoint store
+
     public class ParallelGroupManager : IDisposable
     {
         private readonly IReadOnlyDictionary<string, Func<IStatefulProjection>> _projectionGroups;

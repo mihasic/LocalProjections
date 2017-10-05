@@ -40,7 +40,6 @@ namespace LocalProjections
         private readonly Func<AllStreamPosition> _getStartingPosition;
         private readonly CancellationTokenSource _stopSource = new CancellationTokenSource();
         private readonly State _state = new State();
-
         private int _started = 0;
 
         public RecoverableSubscriptionAdapter(

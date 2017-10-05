@@ -1,4 +1,4 @@
-namespace LocalProjections.Tests.Recipes.LmdbLucene
+namespace LocalProjections.Tests.Recipes
 {
     using System;
     using System.Collections.Generic;
