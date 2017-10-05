@@ -67,6 +67,7 @@ namespace LocalProjections.RavenDb.XTests
             await SaveDoc("test1", "some value1");
             await SaveDoc("test2", "some value2");
             await Wait();
+
             RavenQueryStatistics stat;
             IEnumerable<SearchDocument> docs;
             using (var session = _fixture.SessionFactory())
@@ -81,6 +82,7 @@ namespace LocalProjections.RavenDb.XTests
                     .ToListAsync()
                     .ConfigureAwait(false);
             }
+
             stat.TotalResults.ShouldBe(1);
             var doc = docs.Single();
             doc.Name.ShouldBe("test1");
@@ -111,6 +113,7 @@ namespace LocalProjections.RavenDb.XTests
                     .ToListAsync()
                     .ConfigureAwait(false);
             }
+
             stat.TotalResults.ShouldBe(1);
             var doc = docs.Single();
             doc.Name.ShouldBe("test2");

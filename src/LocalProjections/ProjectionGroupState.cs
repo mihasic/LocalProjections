@@ -25,6 +25,6 @@ namespace LocalProjections
             new ProjectionGroupState(Name, true, exception, Checkpoint);
 
         public ProjectionGroupState MoveTo(AllStreamPosition checkpoint) =>
-            new ProjectionGroupState(Name, Suspended, Exception, checkpoint);
+            new ProjectionGroupState(Name, false, Exception, checkpoint);
     }
 }

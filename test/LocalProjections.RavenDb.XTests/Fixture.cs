@@ -42,7 +42,7 @@ namespace LocalProjections.RavenDb.XTests
 
             Subscription = new RecoverableSubscriptionAdapter(
                 CreateSubscription,
-                () => GroupManager.CreateParallelGroup(),
+                () => GroupManager.CreateParallelGroup(() => Subscription.Restart()),
                 () => GroupManager.ProjectionGroupState.Min);
 
             using (var session = SessionFactory())
@@ -120,9 +120,6 @@ namespace LocalProjections.RavenDb.XTests
             }
         }
 
-        private static string GetId(string name) =>
-            Raven.Client.Document.DocumentConvention.DefaultTypeTagName(typeof(SearchDocument)) + "s/" + name;
-
         private Task<IDisposable> CreateSubscription(
             AllStreamPosition fromPosition,
             MessageReceived onMessage,
@@ -149,7 +146,6 @@ namespace LocalProjections.RavenDb.XTests
         public void Dispose()
         {
             Subscription.Dispose();
-            GroupManager.Dispose();
             EventStore.Dispose();
         }
     }

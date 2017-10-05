@@ -1,18 +1,28 @@
 namespace LocalProjections
 {
+    using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
 
     public class ProjectionGroupStateObserver : IProjectionGroupStateObserver
     {
-        private readonly ConcurrentDictionary<string, ProjectionGroupState> _states = new ConcurrentDictionary<string, ProjectionGroupState>();
+        private readonly ConcurrentDictionary<string, ProjectionGroupState> _states =
+            new ConcurrentDictionary<string, ProjectionGroupState>();
 
         public ProjectionGroupState this[string name]
         {
             get { return _states.GetOrAdd(name, new ProjectionGroupState(name)); }
             set { _states[name] = value; }
         }
+
+        public void MoveTo(string name, AllStreamPosition checkpoint) =>
+            this[name] = this[name].MoveTo(checkpoint);
+        public void Suspend(string name, Exception ex) =>
+            this[name] = this[name].Suspend(ex);
+
+        public void Reset() =>
+            _states.Clear();
 
         public IReadOnlyDictionary<string, ProjectionGroupState> All =>
             _states;

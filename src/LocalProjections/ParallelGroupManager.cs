@@ -7,8 +7,6 @@ namespace LocalProjections
     using System.Linq;
     using LightningStore;
 
-    // TODO - extract checkpoint store
-
     public class ParallelGroupManager : IDisposable
     {
         private readonly IReadOnlyDictionary<string, Func<IStatefulProjection>> _projectionGroups;
@@ -23,14 +21,15 @@ namespace LocalProjections
         {
             _checkpointsDir = Path.Combine(baseDir, "checkpoints");
             Directory.CreateDirectory(_checkpointsDir);
+
             _projectionGroups = projectionGroups.ToDictionary(
                 x => x.Key,
                 x => new StatefulProjectionBuilder(x.Value)
                     .UseCheckpointStore(
                         GetCheckpointStore(x.Key),
-                        cp => _observer[x.Key] = _observer[x.Key].MoveTo(cp))
+                        cp => _observer.MoveTo(x.Key, cp))
                     .UseCommitEvery(maxBatchSize: 2048)
-                    .UseSuspendOnException(ex => _observer[x.Key] = _observer[x.Key].Suspend(ex))
+                    .UseSuspendOnException(ex => _observer.Suspend(x.Key, ex))
                     .BuildFactory());
         }
 
@@ -45,8 +44,9 @@ namespace LocalProjections
             _checkpointStores.GetOrAdd(name,
                 _ => new CheckpointStore(Path.Combine(_checkpointsDir, $"{name}.cpt")));
 
-        public IStatefulProjection CreateParallelGroup()
+        public IStatefulProjection CreateParallelGroup(Action notifyRestart = null)
         {
+            _observer.Reset();
             var projectionGroups = _projectionGroups
                 .ToDictionary(x => x.Key, x => x.Value());
             Func<IReadOnlyCollection<IStatefulProjection>> filtered =
@@ -54,7 +54,12 @@ namespace LocalProjections
             var host = new ParallelExecutionHost(filtered);
 
             return new StatefulProjectionBuilder(host)
-                .Use(disposeMidfunc: downstream => () =>
+                .Use(commitMidfunc: downstream => async ct =>
+                {
+                    await downstream(ct).ConfigureAwait(false);
+                    if (notifyRestart != null && _observer.All.Any() && ! _observer.Active.Any())
+                        notifyRestart();
+                }, disposeMidfunc: downstream => () =>
                 {
                     downstream();
                     foreach (var p in projectionGroups.Values)
@@ -62,9 +67,6 @@ namespace LocalProjections
                 })
                 .Build();
         }
-
-        public AllStreamPosition GetStartingPosition() =>
-            _observer.Min;
 
         public void Dispose()
         {

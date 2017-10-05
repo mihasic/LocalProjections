@@ -7,7 +7,7 @@ namespace LocalProjections.RavenDb.XTests
     using Raven.Client;
     using Raven.Client.Document;
 
-    public class RavenGroupManager : IDisposable
+    public class RavenGroupManager
     {
         private readonly IReadOnlyDictionary<string, Func<IStatefulProjection>> _projectionGroups;
         private readonly ProjectionGroupStateObserver _observer = new ProjectionGroupStateObserver();
@@ -26,16 +26,17 @@ namespace LocalProjections.RavenDb.XTests
                         if (_observer[x.Key].Checkpoint >= message.Checkpoint)
                             return;
                         await downstream(message, ct).ConfigureAwait(false);
-                        _observer[x.Key] = _observer[x.Key].MoveTo(message.Checkpoint);
+                        _observer.MoveTo(x.Key, message.Checkpoint);
                     })
-                    .UseSuspendOnException(ex => _observer[x.Key] = _observer[x.Key].Suspend(ex))
+                    .UseSuspendOnException(ex => _observer.Suspend(x.Key, ex))
                     .BuildFactory());
         }
 
         public IProjectionGroupStateObserver ProjectionGroupState => _observer;
 
-        public async Task<IStatefulProjection> CreateParallelGroup()
+        public async Task<IStatefulProjection> CreateParallelGroup(Action notifyRestart = null)
         {
+            _observer.Reset();
             using (var session = _sessionFactory())
             {
                 var docs = await session.LoadAsync<ProjectionPosition>(
@@ -44,7 +45,7 @@ namespace LocalProjections.RavenDb.XTests
                     new KeyValuePair<string, AllStreamPosition>(k, AllStreamPosition.FromNullableInt64(d?.Position)));
                 foreach (var pair in pairs)
                 {
-                    _observer[pair.Key] = _observer[pair.Key].MoveTo(pair.Value);
+                    _observer.MoveTo(pair.Key, pair.Value);
                 }
             }
 
@@ -71,20 +72,16 @@ namespace LocalProjections.RavenDb.XTests
 
                         await session.SaveChangesAsync(ct).ConfigureAwait(false);
                     }
+                    if (notifyRestart != null && _observer.All.Any() && ! _observer.Active.Any())
+                        notifyRestart();
                 }, disposeMidfunc: downstream => () =>
                 {
                     downstream();
                     foreach (var p in projectionGroups.Values)
                         p.Dispose();
                 })
+                .UseCommitEvery(maxBatchSize: 100)
                 .Build();
         }
-
-        public AllStreamPosition GetStartingPosition() =>
-            _observer.Min;
-
-        public void Dispose()
-        {
-        }
-    }
+   }
 }

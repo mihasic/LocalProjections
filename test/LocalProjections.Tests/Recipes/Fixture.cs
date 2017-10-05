@@ -102,7 +102,7 @@ namespace LocalProjections.Tests.Recipes
 
             Subscription = new RecoverableSubscriptionAdapter(
                 CreateSubscription,
-                () => Task.FromResult(GroupManager.CreateParallelGroup()),
+                () => Task.FromResult(GroupManager.CreateParallelGroup(() => Subscription.Restart())),
                 () => GroupManager.ProjectionGroupState.Min);
         }
 
