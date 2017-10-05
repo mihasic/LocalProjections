@@ -1,4 +1,4 @@
-namespace LocalProjections.RavenDb.Tests
+namespace LocalProjections.RavenDb.XTests
 {
     using System.Linq;
     using Raven.Abstractions.Indexing;

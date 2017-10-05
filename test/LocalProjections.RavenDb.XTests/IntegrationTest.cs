@@ -1,4 +1,4 @@
-namespace LocalProjections.RavenDb.Tests
+namespace LocalProjections.RavenDb.XTests
 {
     using System;
     using System.Collections.Generic;
@@ -29,16 +29,18 @@ namespace LocalProjections.RavenDb.Tests
             AllStreamPosition checkpoint = AllStreamPosition.None;
             while (sw.ElapsedMilliseconds < timeout)
             {
-                //if (_fixture.Subscription.ProjectionGroupState.Max >= maxCheckpoint)
-                var name = _fixture.GroupManager.ProjectionGroupState.All.First().Key;
-                var id = ProjectionPosition.GetIdFromName(name);
-                using (var s = _fixture.SessionFactory())
+                if (_fixture.GroupManager.ProjectionGroupState.All.Any())
                 {
-                    var cp = await s.LoadAsync<ProjectionPosition>(id).ConfigureAwait(false);
-                    checkpoint = AllStreamPosition.FromNullableInt64(cp?.Position);
+                    var name = _fixture.GroupManager.ProjectionGroupState.All.First().Key;
+                    var id = ProjectionPosition.GetIdFromName(name);
+                    using (var s = _fixture.SessionFactory())
+                    {
+                        var cp = await s.LoadAsync<ProjectionPosition>(id).ConfigureAwait(false);
+                        checkpoint = AllStreamPosition.FromNullableInt64(cp?.Position);
+                    }
+                    if (checkpoint >= maxCheckpoint)
+                        return;
                 }
-                if (checkpoint >= maxCheckpoint)
-                    return;
                 await Task.Delay(300);
             }
             throw new TimeoutException();
@@ -57,7 +59,7 @@ namespace LocalProjections.RavenDb.Tests
                 }))
             });
 
-        [Fact(Skip="TODO")]
+        [Fact]
         public async Task Can_append_messages_and_search()
         {
             _fixture.Subscription.Start();
@@ -65,17 +67,29 @@ namespace LocalProjections.RavenDb.Tests
             await SaveDoc("test1", "some value1");
             await SaveDoc("test2", "some value2");
             await Wait();
-            // var (total, _, docs) = _fixture.Index.Search(
-            //     "value:some AND value:*1 AND name:*1",
-            //     fieldsToLoad: new HashSet<string>() { "name" });
-            // total.ShouldBe(1);
-            // docs.Single().Single().Value.ShouldBe("test1");
-            // var projected = _fixture.Repository.Get("test1");
-            // projected.Name.ShouldBe("test1");
-            // projected.Value.ShouldBe("some value1");
+            RavenQueryStatistics stat;
+            IEnumerable<SearchDocument> docs;
+            using (var session = _fixture.SessionFactory())
+            {
+                docs = await session.Query<SearchDocument, SearchDocumentIndex>()
+                    .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                    .Statistics(out stat)
+                    .Search(x => x.Value, "some", options: SearchOptions.And)
+                    .Search(x => x.Value, "*1", options: SearchOptions.And, escapeQueryOptions: EscapeQueryOptions.AllowAllWildcards)
+                    .Take(10)
+                    .ProjectFromIndexFieldsInto<SearchDocument>()
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+            }
+            stat.TotalResults.ShouldBe(1);
+            var doc = docs.Single();
+            doc.Name.ShouldBe("test1");
+            doc.Value.ShouldBe("some value1");
+            doc.Parents.ShouldBeNull();
+            doc.Children.ShouldBeNull();
         }
 
-        [Fact(Skip="TODO")]
+        [Fact]
         public async Task Handles_parents_properly()
         {
             _fixture.Subscription.Start();
@@ -91,8 +105,9 @@ namespace LocalProjections.RavenDb.Tests
                 docs = await session.Query<SearchDocument, SearchDocumentIndex>()
                     .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
                     .Statistics(out stat)
-                    .Where(x => "test1".In(x.Parents))
+                    .Where(x => x.Parents.Contains("test1"))
                     .Take(10)
+                    .ProjectFromIndexFieldsInto<SearchDocument>()
                     .ToListAsync()
                     .ConfigureAwait(false);
             }

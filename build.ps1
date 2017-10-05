@@ -88,8 +88,16 @@ Get-ChildItem test -Recurse -Filter *.csproj | ForEach-Object {
         Pop-Location;
         exit $LASTEXITCODE;
     }
-    if($_.Name -cmatch "Tests") {
+    if($_.Name -cmatch "\.Tests") {
         Invoke-Expression "dotnet test -c $Configuration"
+        if($LASTEXITCODE -ne 0) {
+            Pop-Location;
+            Pop-Location;
+            exit $LASTEXITCODE;
+        }
+    }
+    if($_.Name -cmatch "XTests") {
+        Invoke-Expression "dotnet xunit -c $Configuration"
         if($LASTEXITCODE -ne 0) {
             Pop-Location;
             Pop-Location;

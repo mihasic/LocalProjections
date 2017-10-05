@@ -1,4 +1,4 @@
-namespace LocalProjections.RavenDb.Tests
+namespace LocalProjections.RavenDb.XTests
 {
     using Raven.Client;
     using Raven.Client.Connection.Async;

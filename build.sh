@@ -18,8 +18,11 @@ done
 
 for f in test/**/*.csproj; do
     (cd `dirname $f`; dotnet restore; dotnet build
-    if [[ `basename $f` =~ Tests ]]; then
+    if [[ `basename $f` =~ \.Tests ]]; then
         dotnet test;
+    fi )
+    if [[ `basename $f` =~ \.XTests ]]; then
+        dotnet xunit;
     fi )
 done
 
