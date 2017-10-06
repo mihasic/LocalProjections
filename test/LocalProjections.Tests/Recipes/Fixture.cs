@@ -18,7 +18,8 @@ namespace LocalProjections.Tests.Recipes
         public readonly SimpleEventStore EventStore;
         public readonly PollingNotifier Notifier;
         public readonly RecoverableSubscriptionAdapter Subscription;
-        public readonly ParallelGroupManager GroupManager;
+        public readonly LocalCheckpointGroup CheckpointsGroup;
+        public readonly ProjectionGroupStateObserver Observer = new ProjectionGroupStateObserver();
         public readonly Index Index;
 
         public readonly ObjectRepository<string, SearchDocument> Repository;
@@ -30,6 +31,8 @@ namespace LocalProjections.Tests.Recipes
             _baseDirectory = Path.Combine(Path.GetTempPath(), "local_projections", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_baseDirectory);
             EventStore = new SimpleEventStore(_baseDirectory);
+
+            CheckpointsGroup = new LocalCheckpointGroup(Path.Combine(_baseDirectory, "checkpoint"));
 
             var searchDir = Path.Combine(_baseDirectory, "search");
             Directory.CreateDirectory(searchDir);
@@ -72,39 +75,49 @@ namespace LocalProjections.Tests.Recipes
                 return Task.CompletedTask;
             });
 
-            GroupManager = new ParallelGroupManager(
-                _baseDirectory,
-                new Dictionary<string, Func<IStatefulProjection>>
-                {
-                    {
-                        "main",
-                        () => ProjectionHelpers.Combine(
-                            ProjectionHelpers.Bind(
-                                () => CachingRepositoryHelper.CreateSession(Repository, searchProjector),
-                                repo => ProjectionHelpers.Bind(
-                                    () => CachingRepositoryHelper.CreateSession(ParentLookup),
-                                    parentLookup => (message, ct) =>
-                                    {
-                                        Handle(repo, parentLookup, message);
-                                        return Task.CompletedTask;
-                                    }
-                                )
-                            ),
-                            (message) => _writeLine($"Projected {message.Checkpoint}: {message.Payload?.GetType().Name}"),
-                            () =>
-                            {
-                                searchProjector.Commit();
-                                _writeLine($"Committed");
-                            }
-                        )
-                    }
-                });
-
             Subscription = new RecoverableSubscriptionAdapter(
                 CreateSubscription,
-                () => Task.FromResult(GroupManager.CreateParallelGroup(() => Subscription.Restart())),
-                () => GroupManager.ProjectionGroupState.Min);
+                () => ParallelGroupHelper.CreateParallelGroup(
+                    () => Task.FromResult(CreateParallelGroup(searchProjector)),
+                    Observer,
+                    () => Subscription.Restart()),
+                () => Observer.Min);
         }
+
+        private IReadOnlyDictionary<string, IStatefulProjection> CreateParallelGroup(
+            SearchProjector<string, SearchDocument> searchProjector) =>
+            new Dictionary<string, IStatefulProjection>
+            {
+                {
+                    "main",
+                    WrapLocalProjection("main", ProjectionHelpers.Combine(
+                        ProjectionHelpers.Bind(
+                            () => CachingRepositoryHelper.CreateSession(Repository, searchProjector),
+                            repo => ProjectionHelpers.Bind(
+                                () => CachingRepositoryHelper.CreateSession(ParentLookup),
+                                parentLookup => (message, ct) =>
+                                {
+                                    Handle(repo, parentLookup, message);
+                                    return Task.CompletedTask;
+                                }
+                            )
+                        ),
+                        (message) => _writeLine($"Projected {message.Checkpoint}: {message.Payload?.GetType().Name}"),
+                        () =>
+                        {
+                            searchProjector.Commit();
+                            _writeLine($"Committed");
+                        }
+                    ))
+                }
+            };
+
+        private IStatefulProjection WrapLocalProjection(string name, IStatefulProjection projection) =>
+            new StatefulProjectionBuilder(projection)
+                .UseCheckpointStore(CheckpointsGroup.GetCheckpointStore(name), cp => Observer.MoveTo(name, cp))
+                .UseCommitEvery()
+                .UseSuspendOnException(ex => Observer.Suspend(name, ex))
+                .Build();
 
         private void Handle(
             Lazy<CachingRepository<string, SearchDocument>> repo,
@@ -168,12 +181,12 @@ namespace LocalProjections.Tests.Recipes
         public void Dispose()
         {
             Subscription.Dispose();
-            GroupManager.Dispose();
             Notifier.Dispose();
             EventStore.Dispose();
             Repository.Dispose();
             ParentLookup.Dispose();
             Index.Dispose();
+            CheckpointsGroup.Dispose();
 
             try { Directory.Delete(_baseDirectory, true); } catch { }
         }

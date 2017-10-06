@@ -5,6 +5,7 @@
     <Title>LocalProjections - set of classes to setup local projections using LMDB and Lucene.Net</Title>
     <Description>LocalProjections is a set of classes to setup local projections using LMDB and Lucene.Net.</Description>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="LightningStore" Version="0.3.2" />
     <PackageReference Include="LuceneSearch" Version="0.3.1" />

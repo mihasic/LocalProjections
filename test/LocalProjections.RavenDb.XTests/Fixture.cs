@@ -21,8 +21,9 @@ namespace LocalProjections.RavenDb.XTests
 
         public readonly InMemoryStreamStore EventStore;
         public readonly RecoverableSubscriptionAdapter Subscription;
-        public readonly RavenGroupManager GroupManager;
+        //public readonly RavenGroupManager GroupManager;
         public readonly Func<IAsyncDocumentSession> SessionFactory;
+        public readonly ProjectionGroupStateObserver Observer = new ProjectionGroupStateObserver();
 
         public Fixture(Action<string> writeLine)
         {
@@ -30,26 +31,56 @@ namespace LocalProjections.RavenDb.XTests
             EventStore = new InMemoryStreamStore();
             SessionFactory = RavenDb.CreateSessionFactory();
 
-            GroupManager = new RavenGroupManager(
-                SessionFactory,
-                new Dictionary<string, Func<IStatefulProjection>>
-                {
-                    {
-                        "main",
-                        () => new DelegateProjection((e, ct) => Handle(e))
-                    }
-                });
-
             Subscription = new RecoverableSubscriptionAdapter(
                 CreateSubscription,
-                () => GroupManager.CreateParallelGroup(() => Subscription.Restart()),
-                () => GroupManager.ProjectionGroupState.Min);
+                () => CreateParallelGroup(),
+                () => Observer.Min);
 
             using (var session = SessionFactory())
             {
                 new SearchDocumentIndex().ExecuteAsync(session.GetAsyncDatabaseCommands(), new DocumentConvention())
                     .Wait();
             }
+            _writeLine("Setup finished");
+        }
+
+        private async Task<IStatefulProjection> CreateParallelGroup()
+        {
+            var host = await ParallelGroupHelper.CreateParallelGroup(
+                async () => 
+                {
+                    await RavenCheckpointGroup.LoadCheckpoints(SessionFactory, Observer, new[] { "main" })
+                        .ConfigureAwait(false);
+                    _writeLine("Loaded checkpoints");
+
+                    return new Dictionary<string, IStatefulProjection>
+                    {
+                        {
+                            "main",
+                            RavenCheckpointGroup.Wrap(Observer, "main", new DelegateProjection((e, ct) => Handle(e)))
+                        }
+                    };
+                },
+                Observer,
+                () =>
+                {
+                    _writeLine("Restarting subscription");
+                    Subscription.Restart();
+                }
+            ).ConfigureAwait(false);
+
+            _writeLine("Created parallel host");
+            return new StatefulProjectionBuilder(host)
+                .Use(commitMidfunc: downstream => async ct =>
+                {
+                    _writeLine("Downstream commit");
+                    await downstream(ct).ConfigureAwait(false);
+                    _writeLine("Going to commit checkpoints");
+                    await RavenCheckpointGroup.CommitActiveCheckpoints(SessionFactory, Observer, ct)
+                        .ConfigureAwait(false);
+                })
+                .UseCommitEvery(maxBatchSize: 100)
+                .Build();
         }
 
         private async Task Handle(Envelope envelope)

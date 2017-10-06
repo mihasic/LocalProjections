@@ -17,8 +17,11 @@ namespace LocalProjections.RavenDb.XTests
     public class IntegrationTest : IDisposable
     {
         private readonly Fixture _fixture;
+        private readonly Action<string> _writeLine;
+
         public IntegrationTest(ITestOutputHelper output)
         {
+            _writeLine = output.WriteLine;
             _fixture = new Fixture(output.WriteLine);
         }
 
@@ -29,19 +32,23 @@ namespace LocalProjections.RavenDb.XTests
             AllStreamPosition checkpoint = AllStreamPosition.None;
             while (sw.ElapsedMilliseconds < timeout)
             {
-                if (_fixture.GroupManager.ProjectionGroupState.All.Any())
+                if (_fixture.Observer.All.Any())
                 {
-                    var name = _fixture.GroupManager.ProjectionGroupState.All.First().Key;
-                    var id = ProjectionPosition.GetIdFromName(name);
-                    using (var s = _fixture.SessionFactory())
-                    {
-                        var cp = await s.LoadAsync<ProjectionPosition>(id).ConfigureAwait(false);
-                        checkpoint = AllStreamPosition.FromNullableInt64(cp?.Position);
-                    }
-                    if (checkpoint >= maxCheckpoint)
+                    // var name = _fixture.Observer.All.First().Key;
+                    // var id = ProjectionPosition.GetIdFromName(name);
+                    // using (var s = _fixture.SessionFactory())
+                    // {
+                    //     var cp = await s.LoadAsync<ProjectionPosition>(id).ConfigureAwait(false);
+                    //     checkpoint = AllStreamPosition.FromNullableInt64(cp?.Position);
+                    // }
+                    if (_fixture.Observer.Min >= maxCheckpoint)
                         return;
                 }
                 await Task.Delay(300);
+            }
+            foreach (var state in _fixture.Observer.All.Values)
+            {
+                _writeLine($"[{state.Name}]: {state.Checkpoint} {state.Suspended} {state.Exception}");
             }
             throw new TimeoutException();
         }

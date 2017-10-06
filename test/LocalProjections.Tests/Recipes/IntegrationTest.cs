@@ -23,11 +23,14 @@ namespace LocalProjections.Tests.Recipes
             var maxCheckpoint = await _fixture.EventStore.ReadHead().ConfigureAwait(false);
             while (sw.ElapsedMilliseconds < timeout)
             {
-                //if (_fixture.Subscription.ProjectionGroupState.Max >= maxCheckpoint)
-                var name = _fixture.GroupManager.ProjectionGroupState.All.First().Key;
-                var cp = _fixture.GroupManager.ReadCheckpoint(name);
-                if (cp >= maxCheckpoint)
-                    return;
+                if (_fixture.Observer.All.Any())
+                {
+                    //if (_fixture.Subscription.ProjectionGroupState.Max >= maxCheckpoint)
+                    var name = _fixture.Observer.All.First().Key;
+                    var cp = _fixture.CheckpointsGroup.ReadCheckpoint(name);
+                    if (cp >= maxCheckpoint)
+                        return;
+                }
                 await Task.Delay(300);
             }
             throw new TimeoutException();
