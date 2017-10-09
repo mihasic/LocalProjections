@@ -10,7 +10,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalProjections", "src\Loc
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LocalProjections.Tests", "test\LocalProjections.Tests\LocalProjections.Tests.csproj", "{4F43915A-FCE6-43CC-8851-360BD075BFF8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalProjections.RavenDb.Tests", "test\LocalProjections.RavenDb.Tests\LocalProjections.RavenDb.Tests.csproj", "{4B3D1C53-67FF-47C9-97BF-100C7850357B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalProjections.RavenDb.XTests", "test\LocalProjections.RavenDb.XTests\LocalProjections.RavenDb.XTests.csproj", "{4B3D1C53-67FF-47C9-97BF-100C7850357B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
