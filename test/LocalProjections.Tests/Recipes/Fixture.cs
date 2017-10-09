@@ -77,7 +77,7 @@ namespace LocalProjections.Tests.Recipes
 
             Subscription = new RecoverableSubscriptionAdapter(
                 CreateSubscription,
-                () => ParallelGroupHelper.CreateParallelGroup(
+                () => ParallelGroupHelper.CreateObservableParallelGroup(
                     () => Task.FromResult(CreateParallelGroup(searchProjector)),
                     Observer,
                     () => Subscription.Restart()),

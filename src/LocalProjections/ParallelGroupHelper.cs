@@ -10,13 +10,14 @@ namespace LocalProjections
 
     public class ParallelGroupHelper
     {
-        public static async Task<IStatefulProjection> CreateParallelGroup(
+        public static async Task<IStatefulProjection> CreateObservableParallelGroup(
             Func<Task<IReadOnlyDictionary<string, IStatefulProjection>>> buildProjectionGroups,
             ProjectionGroupStateObserver observer,
             Action notifyRestart = null)
         {
             observer.Reset();
             var projectionGroups = await buildProjectionGroups().ConfigureAwait(false);
+
             Func<IReadOnlyCollection<IStatefulProjection>> filtered =
                 () => observer.Active.Select(x => projectionGroups[x]).ToArray();
             var host = new ParallelExecutionHost(filtered);

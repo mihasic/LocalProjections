@@ -46,7 +46,7 @@ namespace LocalProjections.RavenDb.XTests
 
         private async Task<IStatefulProjection> CreateParallelGroup()
         {
-            var host = await ParallelGroupHelper.CreateParallelGroup(
+            var host = await ParallelGroupHelper.CreateObservableParallelGroup(
                 async () => 
                 {
                     await RavenCheckpointGroup.LoadCheckpoints(SessionFactory, Observer, new[] { "main" })
