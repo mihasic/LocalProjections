@@ -3,7 +3,6 @@ namespace LocalProjections
     using System;
     using System.Threading;
     using System.Threading.Tasks;
-    using LightningStore;
 
     public class RecoverableSubscriptionAdapter : IDisposable
     {

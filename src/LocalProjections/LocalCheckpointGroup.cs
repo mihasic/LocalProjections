@@ -4,6 +4,7 @@ namespace LocalProjections
     using System.Collections.Concurrent;
     using System.IO;
     using LightningStore;
+
     public class LocalCheckpointGroup : IDisposable
     {
         private readonly ConcurrentDictionary<string, CheckpointStore> _checkpointStores =

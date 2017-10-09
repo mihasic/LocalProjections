@@ -1,14 +1,11 @@
 namespace LocalProjections
 {
     using System;
-    using System.Collections.Concurrent;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
-    using LightningStore;
 
-    public class ParallelGroupHelper
+    public static class ParallelGroupHelper
     {
         public static async Task<IStatefulProjection> CreateObservableParallelGroup(
             Func<Task<IReadOnlyDictionary<string, IStatefulProjection>>> buildProjectionGroups,

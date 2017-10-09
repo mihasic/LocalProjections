@@ -1,8 +1,6 @@
 namespace LocalProjections
 {
     using System;
-    using System.Threading;
-    using System.Threading.Tasks;
 
     using ProjectFunc = System.Func<Envelope, System.Threading.CancellationToken, System.Threading.Tasks.Task>;
     using CommitFunc = System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task>;

@@ -5,7 +5,6 @@ namespace LocalProjections.Tests
     using System.Threading.Tasks;
     using Shouldly;
     using Xunit;
-    using Xunit.Abstractions;
 
     public class PollingNotifierTests : IDisposable
     {

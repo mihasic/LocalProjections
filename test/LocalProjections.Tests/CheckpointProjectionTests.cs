@@ -1,9 +1,6 @@
 namespace LocalProjections.Tests
 {
-    using System;
-    using System.IO;
     using System.Threading.Tasks;
-    using LightningStore;
     using Shouldly;
     using Xunit;
 

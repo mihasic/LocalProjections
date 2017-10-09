@@ -3,6 +3,7 @@ namespace LocalProjections.RavenDb.XTests
     using System.Linq;
     using Raven.Abstractions.Indexing;
     using Raven.Client.Indexes;
+
     public class SearchDocumentIndex : AbstractIndexCreationTask<RavenDocument, SearchDocument>
     {
         public SearchDocumentIndex()

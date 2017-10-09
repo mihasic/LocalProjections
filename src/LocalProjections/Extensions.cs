@@ -1,11 +1,7 @@
 namespace LocalProjections
 {
     using System;
-    using System.Collections.Generic;
-    using System.Threading;
     using System.Threading.Tasks;
-    using LightningStore;
-    using LuceneSearch;
 
     public static class Extensions
     {

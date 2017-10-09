@@ -2,14 +2,11 @@ namespace LocalProjections.RavenDb.XTests
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Raven.Client;
     using Raven.Client.Document;
-    using Raven.Client.Embedded;
-    using Raven.Client.Indexes;
     using SqlStreamStore;
     using SqlStreamStore.Streams;
     using SqlStreamStore.Subscriptions;
@@ -21,7 +18,6 @@ namespace LocalProjections.RavenDb.XTests
 
         public readonly InMemoryStreamStore EventStore;
         public readonly RecoverableSubscriptionAdapter Subscription;
-        //public readonly RavenGroupManager GroupManager;
         public readonly Func<IAsyncDocumentSession> SessionFactory;
         public readonly ProjectionGroupStateObserver Observer = new ProjectionGroupStateObserver();
 

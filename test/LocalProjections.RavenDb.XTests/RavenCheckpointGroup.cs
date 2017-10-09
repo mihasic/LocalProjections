@@ -6,9 +6,8 @@ namespace LocalProjections.RavenDb.XTests
     using System.Threading;
     using System.Threading.Tasks;
     using Raven.Client;
-    using Raven.Client.Document;
 
-    public class RavenCheckpointGroup
+    public static class RavenCheckpointGroup
     {
         public static async Task LoadCheckpoints(
             Func<IAsyncDocumentSession> sessionFactory,

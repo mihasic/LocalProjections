@@ -1,8 +1,8 @@
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace LocalProjections
 {
+    using System.Threading;
+    using System.Threading.Tasks;
+
     public class CommitNthProjection : IStatefulProjection
     {
         private readonly IStatefulProjection _inner;
