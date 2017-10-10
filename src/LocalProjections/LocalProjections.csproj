@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\common.props" />
+  <!-- <Import Project="..\common.props" /> -->
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <Version>0.1.0</Version>
+    <Authors>M. Rybnikov</Authors>
+    <PackageLicenseUrl>https://github.com/mihasic/LocalProjections/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/mihasic/LocalProjections/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/mihasic/LocalProjections/</RepositoryUrl>
+  </PropertyGroup>
 
   <PropertyGroup>
     <Title>LocalProjections - set of classes to setup local projections using LMDB and Lucene.Net</Title>
