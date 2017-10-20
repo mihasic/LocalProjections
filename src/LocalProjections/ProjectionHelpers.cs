@@ -18,7 +18,7 @@ namespace LocalProjections
             var session = createSession();
             var projection = projectBuilder(session);
             return new DelegateProjection(
-                projection.Project,
+                (m, ct) => projection.Project(m, ct),
                 async ct =>
                 {
                     await projection.Commit(ct).ConfigureAwait(false);
@@ -50,7 +50,7 @@ namespace LocalProjections
             var session = createSession();
             var projection = projectBuilder(session);
             return new DelegateProjection(
-                projection,
+                (m, ct) => projection(m, ct),
                 ct =>
                 {
                     if (session.IsValueCreated)
