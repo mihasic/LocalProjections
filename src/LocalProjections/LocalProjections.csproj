@@ -16,6 +16,6 @@
 
   <ItemGroup>
     <PackageReference Include="LightningStore" Version="0.3.2" />
-    <PackageReference Include="LuceneSearch" Version="0.3.2" />
+    <PackageReference Include="LuceneSearch" Version="0.3.3" />
   </ItemGroup>
 </Project>
