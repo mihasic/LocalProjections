@@ -16,13 +16,10 @@ for f in src/**/*.csproj; do
     (cd `dirname $f`; dotnet build)
 done
 
-for f in test/**/*.csproj; do
+for f in test/**/*.Tests.csproj; do
     (cd `dirname $f`; dotnet restore; dotnet build
     if [[ `basename $f` =~ \.Tests ]]; then
         dotnet test;
-    fi )
-    if [[ `basename $f` =~ \.XTests ]]; then
-        dotnet xunit;
     fi )
 done
 

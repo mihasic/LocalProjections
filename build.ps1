@@ -54,62 +54,30 @@ if($FoundDotNetCliVersion -ne $DotNetVersion) {
 
 Push-Location
 
-Get-ChildItem src -Recurse -Filter *.csproj | ForEach-Object {
-    Push-Location $_.DirectoryName
-    Invoke-Expression "dotnet restore"
+Invoke-Expression "dotnet restore"
+Invoke-Expression "dotnet build -c $Configuration"
+
+Get-ChildItem test -Recurse -Filter *.Tests.csproj | ForEach-Object {
+    Invoke-Expression "dotnet test $($_.FullName) -c $Configuration"
     if($LASTEXITCODE -ne 0) {
-        Pop-Location;
         Pop-Location;
         exit $LASTEXITCODE;
     }
-    Pop-Location;
 }
-Get-ChildItem src -Recurse -Filter *.csproj | ForEach-Object {
+Get-ChildItem test -Recurse -Filter *.XTests.csproj | ForEach-Object {
     Push-Location $_.DirectoryName
-    Invoke-Expression "dotnet build -c $Configuration"
+    Invoke-Expression "dotnet xunit -c $Configuration"
     if($LASTEXITCODE -ne 0) {
         Pop-Location;
         Pop-Location;
         exit $LASTEXITCODE;
-    }
-    Pop-Location;
-}
-Get-ChildItem test -Recurse -Filter *.csproj | ForEach-Object {
-    Push-Location $_.DirectoryName
-    Invoke-Expression "dotnet restore"
-    if($LASTEXITCODE -ne 0) {
-        Pop-Location;
-        Pop-Location;
-        exit $LASTEXITCODE;
-    }
-    Invoke-Expression "dotnet build -c $Configuration"
-    if($LASTEXITCODE -ne 0) {
-        Pop-Location;
-        Pop-Location;
-        exit $LASTEXITCODE;
-    }
-    if($_.Name -cmatch "\.Tests") {
-        Invoke-Expression "dotnet test -c $Configuration"
-        if($LASTEXITCODE -ne 0) {
-            Pop-Location;
-            Pop-Location;
-            exit $LASTEXITCODE;
-        }
-    }
-    if($_.Name -cmatch "XTests") {
-        Invoke-Expression "dotnet xunit -c $Configuration"
-        if($LASTEXITCODE -ne 0) {
-            Pop-Location;
-            Pop-Location;
-            exit $LASTEXITCODE;
-        }
     }
     Pop-Location;
 }
 
 Get-ChildItem src -Recurse -Filter *.csproj | ForEach-Object {
     Push-Location $_.DirectoryName
-    Invoke-Expression "dotnet pack -c $Configuration -o $PSScriptRoot\artifacts"
+    Invoke-Expression "dotnet pack -c $Configuration --no-build -o $PSScriptRoot\artifacts"
     if($LASTEXITCODE -ne 0) {
         Pop-Location;
         Pop-Location;
