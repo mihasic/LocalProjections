@@ -3,8 +3,8 @@ param(
 )
 
 $DotNetChannel = "Current";
-$DotNetVersion = "2.0.0";
-$DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/release/2.0.0/scripts/obtain/dotnet-install.ps1";
+$DotNetVersion = "2.0.2";
+$DotNetInstallerUri = "https://dot.net/dotnet-install.ps1";
 
 # Make sure tools folder exists
 $PSScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent

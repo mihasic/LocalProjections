@@ -1,0 +1,17 @@
+language: csharp
+
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: required
+      mono: none
+      dotnet: 2.0.0
+    - os: osx
+      osx_image: xcode9
+      mono: none
+      dotnet: 2.0.2
+
+script:
+  - dotnet --info
+  - ./build.sh
