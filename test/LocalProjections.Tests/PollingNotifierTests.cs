@@ -54,6 +54,14 @@ namespace LocalProjections.Tests
         }
 
         [Fact]
+        public async Task Can_manually_set_notification()
+        {
+            (await Wait()).ShouldBeFalse();
+            _notifier.ForceNotify();
+            (await Wait()).ShouldBeTrue();
+        }
+
+        [Fact]
         public async Task Notification_on_position_change()
         {
             // this also verifies cancellation

@@ -60,6 +60,9 @@ namespace LocalProjections
             }
         }
 
+        public void ForceNotify() =>
+            _autoResetEvent.Set();
+
         public void Dispose() =>
             _disposed.Cancel();
      }
