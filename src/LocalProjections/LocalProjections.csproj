@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LightningStore" Version="0.3.2" />
+    <PackageReference Include="LightningStore" Version="0.3.3" />
     <PackageReference Include="LuceneSearch" Version="0.4.1" />
   </ItemGroup>
 </Project>
